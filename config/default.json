@@ -1,0 +1,24 @@
+{
+    "Logging": {
+        "escapeValues": false,
+        "level": "ALL",
+        "appenders": [
+            {
+                "type": "console",
+                "layout": {
+                    "type": "pattern",
+                    "pattern": "%d{yyyy-MM-dd hh:mm:ss.SSS}|%p|JiboSports|%m"
+                }
+            }
+        ]
+    },
+    "site": {
+        "port": 6677
+    },
+    "sportRadarAPI": {
+        "MLB": {
+            "baseUrl": "https://api.sportradar.us/mlb-t5",
+            "apiKey": "6sz5k5xfpwtjn2mqu6pyvys7"
+        }
+    }
+}
