@@ -1,4 +1,6 @@
-﻿var sprintf = require('sprintf').sprintf;
+﻿"use strict";
+
+var sprintf = require('sprintf').sprintf;
 
 var routes = function (express, logger) {
     var healthCheckResponse = {
@@ -22,5 +24,5 @@ var routes = function (express, logger) {
             return response.status(200).json(healthCheckResponse);
         });
     return router;
-}
+};
 module.exports = routes;

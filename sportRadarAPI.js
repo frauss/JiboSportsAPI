@@ -88,6 +88,27 @@
                     callback(null, boxscoreInfo);
                 }
             });
-        }
+        };
+
+        this.getStandings = function(callback) {
+            var standingsUrl = url.parse(this.baseUrl.format());
+            standingsUrl.pathname = path.join(standingsUrl.path, "seasontd",
+                "2016", "reg", "standings.json");
+            standingsUrl.query = { "api_key": this.APIKey };
+            request.get(standingsUrl.format(), function (error, response, body) {
+                if (error) {
+                    callback(error, null);
+                }
+                else if (response.statusCode !== 200) {
+                    error = new Error(sprintf("Invalid response code returned retrieving standings from url = %s: %s %s",
+                        standingsUrl.format(), response.statusCode, response.statusMessage));
+                    callback(error, null);
+                }
+                else {
+                    var standingsInfo = JSON.parse(body);
+                    callback(null, standingsInfo);
+                }
+            });
+        };
     }
 }(module.exports));
