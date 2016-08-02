@@ -23,17 +23,17 @@ var routes = function (express, config, logger) {
             if (gameDate) {
                 analyzeTeam(request.body.team, function(err, foundTeams) {
                     if (err) {
-                        responseBody.error = sprintf("Error retrieving team info for %s: %s",
+                        responseBody.error = sprintf("There was an error finding team info for %s: %s",
                             request.body.team, err);
                         response.status(500).send(JSON.stringify(responseBody));
                     }
                     else if (foundTeams.length === 0) {
-                        responseBody.error = sprintf("No team found for %s",
+                        responseBody.responseText = sprintf("I could not find a team for %s",
                             request.body.team);
-                        response.status(404).send(JSON.stringify(responseBody));
+                        response.status(200).send(JSON.stringify(responseBody));
                     }
                     else if (foundTeams.length > 1) {
-                        responseBody.error = sprintf("Multiple teams found for argument %s", request.body.team);
+                        responseBody.error = sprintf("I found multiple teams found for %s, please be more specific", request.body.team);
                         responseBody.teams = foundTeams;
                         response.status(200).send(JSON.stringify(responseBody));
                     }
@@ -48,17 +48,17 @@ var routes = function (express, config, logger) {
                                 response.status(200).send(JSON.stringify(responseBody));
                             }
                             else {
-                                responseBody.error = sprintf("No games found for %s on %s",
+                                responseBody.responseText = sprintf("I could not find a game for %s on %s",
                                     request.body.team, gameDate.format("dddd MMMM Do"));
-                                response.status(404).send(JSON.stringify(responseBody));
+                                response.status(200).send(JSON.stringify(responseBody));
                             }
                         });
                     }
                 });
             }
             else {
-                responseBody.error = sprintf("Invalid date argument specified: %s", request.body.date);
-                response.status(500).send(JSON.stringify(responseBody));
+                responseBody.responseText = sprintf("I could not understand the date specified: %s", request.body.date);
+                response.status(200).send(JSON.stringify(responseBody));
             }
         });
 
@@ -68,17 +68,17 @@ var routes = function (express, config, logger) {
             var responseBody = {};
             analyzeTeam(request.body.team, function(err, foundTeams) {
                 if (err) {
-                    responseBody.error = sprintf("Error retrieving team info for %s: %s",
+                    responseBody.error = sprintf("There was an error finding team info for %s: %s",
                         request.body.team, err);
                     response.status(500).send(JSON.stringify(responseBody));
                 }
                 else if (foundTeams.length === 0) {
-                    responseBody.error = sprintf("No team found for %s",
+                    responseBody.responseText = sprintf("I could not find a team for %s",
                         request.body.team);
-                    response.status(404).send(JSON.stringify(responseBody));
+                    response.status(200).send(JSON.stringify(responseBody));
                 }
                 else if (foundTeams.length > 1) {
-                    responseBody.error = sprintf("Multiple teams found for argument %s", request.body.team);
+                    responseBody.error = sprintf("I found multiple teams found for %s, please be more specific", request.body.team);
                     responseBody.teams = foundTeams;
                     response.status(200).send(JSON.stringify(responseBody));
                 }
@@ -90,7 +90,7 @@ var routes = function (express, config, logger) {
                             response.status(200).send(JSON.stringify(responseBody));
                         }
                         else {
-                            responseBody.error = sprintf("No standings found for %s",
+                            responseBody.error = sprintf("I could not find standings found for %s",
                                 request.body.team);
                             response.status(404).send(JSON.stringify(responseBody));
                         }
@@ -221,7 +221,6 @@ var routes = function (express, config, logger) {
     }
 
     function parseSpecificDate(dateText) {
-        //var specificDateRegex = /\b((?:(?:Mon)|(?:Tues?)|(?:Wed(?:nes)?)|(?:Thur?s?)|(?:Fri)|(?:Sat(?:ur)?)|(?:Sun))(?:day)?)?[:\-,]?\s*((?:(?:jan|feb)?r?(?:uary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|oct(?:ober)?|(?:sept|nov|dec)(?:ember)?))\s+(\d{1,2})\s*(,?\s*(\d{4}))?/i;
         var specificDateRegex = /\b((?:(?:Mon)|(?:Tues?)|(?:Wed(?:nes)?)|(?:Thur?s?)|(?:Fri)|(?:Sat(?:ur)?)|(?:Sun))(?:day)?)?[:\-,]?\s*(((?:(?:jan|feb)?r?(?:uary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|oct(?:ober)?|(?:sept|nov|dec)(?:ember)?))\s+(\d{1,2}))?\s*(,?\s*(\d{4}))?/i;
         var matches = specificDateRegex.exec(dateText);
         var returnDate;
@@ -230,11 +229,11 @@ var routes = function (express, config, logger) {
                 returnDate = moment().day(matches[1]);
             }
             else {
-                if (!matches[2] || !matches[3]) {
+                if (!matches[3] || !matches[4]) {
                     router.logger.error("Must provide at least the dayname or month and day.");
                     return null;
                 }
-                var specificDateText = sprintf("%s %s %s", matches[2], matches[3], (matches[4] ? matches[4] : moment().format("YYYY")));
+                var specificDateText = sprintf("%s %s %s", matches[3], matches[4], (matches[5] ? matches[5] : moment().format("YYYY")));
                 returnDate = moment(specificDateText, "MMM DD, YYYY");
             }
         }

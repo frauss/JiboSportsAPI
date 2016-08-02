@@ -114,8 +114,14 @@
 
                     case "scheduled":
                         var gameTime = moment(gameInfo.gameTime);
-                        responseText = sprintf("The %s will play the %s at %s starting at %s",
-                            gameInfo.awayName, gameInfo.homeName, gameInfo.venue, gameTime.format("h:mm a"));
+                        if (myTeam === "home") {
+                            responseText = sprintf("The %s will play the %s at %s starting at %s",
+                                gameInfo.homeName, gameInfo.awayName, gameInfo.venue, gameTime.format("h:mm a"));
+                        }
+                        else {
+                            responseText = sprintf("The %s will play the %s at %s starting at %s",
+                                gameInfo.awayName, gameInfo.homeName, gameInfo.venue, gameTime.format("h:mm a"));
+                        }
                         break;
 
                     default:
