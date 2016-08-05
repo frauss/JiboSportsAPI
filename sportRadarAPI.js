@@ -6,6 +6,7 @@
     var querystring = require('querystring');
     var url = require('url');
     var path = require('path');
+    var moment = require('moment');
 
     module.exports = SportRadarAPI;
 
@@ -43,6 +44,34 @@
                         var hierarchyInfo = JSON.parse(body);
                         self.hierarchy = hierarchyInfo;
                         callback(null, hierarchyInfo);
+                    }
+                });
+            }
+        };
+
+        this.getSeasonSchedule = function(callback) {
+            var self = this;
+            if (this.seasonSchedule) {
+                callback(null, this.seasonSchedule);
+            }
+            else {
+                var seasonScheduleUrl = url.parse(this.baseUrl.format());
+                seasonScheduleUrl.pathname = path.join(seasonScheduleUrl.path, "games",
+                    moment().format("YYYY"), "reg", "schedule.json");
+                seasonScheduleUrl.query = { "api_key": this.APIKey };
+                request.get(seasonScheduleUrl.format(), function (error, response, body) {
+                    if (error) {
+                        callback(error, null);
+                    }
+                    else if (response.statusCode !== 200) {
+                        error = new Error(sprintf("Invalid response code returned retrieving season schedule from url = %s: %s %s",
+                            seasonScheduleUrl.format(), response.statusCode, response.statusMessage));
+                        callback(error, null);
+                    }
+                    else {
+                        var seasonScheduleInfo = JSON.parse(body);
+                        self.seasonSchedule = seasonScheduleInfo;
+                        callback(null, seasonScheduleInfo);
                     }
                 });
             }

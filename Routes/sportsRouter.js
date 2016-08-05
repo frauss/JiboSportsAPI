@@ -19,8 +19,8 @@ var routes = function (express, config, logger) {
         .post(function (request, response) {
             response.header("Content-Type",'application/json');
             var responseBody = {};
-            var gameDate = analyzeDate(request.body.date);
-            if (gameDate) {
+            var gameDateInfo = analyzeDate(request.body.date);
+            if (gameDateInfo.time) {
                 analyzeTeam(request.body.team, function(err, foundTeams) {
                     if (err) {
                         responseBody.error = sprintf("There was an error finding team info for %s: %s",
@@ -38,18 +38,19 @@ var routes = function (express, config, logger) {
                         response.status(200).send(JSON.stringify(responseBody));
                     }
                     else {
-                        findGames(gameDate, foundTeams[0], function(err, gameInfo) {
+                        findGames(gameDateInfo.time, foundTeams[0], function(err, gameInfo) {
                             if (gameInfo.length > 0) {
 
                                 // Need this to respond properly for the team asked for
                                 gameInfo.queriedTeamId = foundTeams[0].id;
+                                gameInfo.gameDateInfo = gameDateInfo;
                                 var responder = ResponseFormatterFactory.getFormatter("game", gameInfo);
                                 responseBody.responseText = responder.formulateResponse(request.body);
                                 response.status(200).send(JSON.stringify(responseBody));
                             }
                             else {
                                 responseBody.responseText = sprintf("I could not find a game for %s on %s",
-                                    request.body.team, gameDate.format("dddd MMMM Do"));
+                                    request.body.team, gameDateInfo.time.format("dddd MMMM Do"));
                                 response.status(200).send(JSON.stringify(responseBody));
                             }
                         });
@@ -99,25 +100,82 @@ var routes = function (express, config, logger) {
             });
         });
 
+    router.route('/findgamebetween')
+        .post(function (request, response) {
+            response.header("Content-Type", 'application/json');
+            var responseBody = {};
+            var gameTeams = [];
+            async.forEach(request.body.teams, function(teamToFind, nextTeam){
+                analyzeTeam(teamToFind, function(err, foundTeams) {
+                        if (err) {
+                            responseBody.error = sprintf("There was an error finding team info for %s: %s",
+                                teamToFind);
+                            response.status(500);
+                            nextTeam(err);
+                        }
+                        else if (foundTeams.length === 0) {
+                            responseBody.responseText = sprintf("I could not find a team for %s",
+                                teamToFind);
+                            response.status(200);
+                            nextTeam("NoTeamFound");
+                        }
+                        else if (foundTeams.length > 1) {
+                            responseBody.error = sprintf("I found multiple teams found for %s, please be more specific",
+                                teamToFind);
+                            responseBody.teams = foundTeams;
+                            response.status(200);
+                            nextTeam("MultipleTeamsFound");
+                        }
+                        else {
+                            gameTeams.push(foundTeams[0]);
+                            nextTeam(null);
+                        }
+                });
+            },
+            function (err) {
+                if (err) {
+                    response.send(JSON.stringify(responseBody));
+                }
+                else {
+                    findNextGameBetween(gameTeams, function(err, gameInfo) {
+                        if (gameInfo) {
+                            var gameArray = [gameInfo];
+                            var responder = ResponseFormatterFactory.getFormatter("game", gameArray);
+                            responseBody.responseText = responder.formulateResponse(request.body);
+                            response.status(200).send(JSON.stringify(responseBody));
+                        }
+                        else {
+                            responseBody.responseText = sprintf("I could not find a game in the future between the %s and the %s",
+                                gameTeams[0].name, gameTeams[1].name);
+                            response.status(200).send(JSON.stringify(responseBody));
+                        }
+                    });
+                }
+            });
+        });
+
     function analyzeDate(dateText) {
-        var returnDate;
+        var returnDateInfo = {};
 
         if (!dateText || 0 === dateText.length) {
-            returnDate = moment();
+            returnDateInfo.time = moment();
         }
         else if (/to(day|night)/i.test(dateText)) {
-            returnDate = moment();
+            returnDateInfo.time = moment();
         }
         else if (/(yesterday|last night)/i.test(dateText)) {
-            returnDate = moment().subtract(1, 'days');
+            returnDateInfo.time = moment().subtract(1, 'days');
         }
         else if (/tomorrow/i.test(dateText)) {
-            returnDate = moment().add(1, 'days');
+            returnDateInfo.time = moment().add(1, 'days');
         }
         else {
-            returnDate = parseSpecificDate(dateText);
+            returnDateInfo.time = parseSpecificDate(dateText);
         }
-        return returnDate;
+        if (returnDateInfo.time) {
+            returnDateInfo.isToday = returnDateInfo.time.isSame(moment(), 'days');
+        }
+        return returnDateInfo;
     }
 
     function analyzeTeam(teamText, callback) {
@@ -169,6 +227,45 @@ var routes = function (express, config, logger) {
                 function (err) {
                     callback(err, boxScores);
                 });
+            }
+        });
+    }
+
+    function findNextGameBetween(teams, callback) {
+        router.mlbAPI.getSeasonSchedule(function(err, scheduleInfo) {
+            var foundGames = [];
+            if (err) {
+                router.logger.error(sprintf("Error getting schedule info: %s", err));
+                callback(err, null);
+            }
+            else {
+                var today = moment().format("YYYY-MM-DDTHH:mm:ssZ");
+                var gameQuery = sprintf("league.season.games[?((home_team == '%s' && away_team == '%s') || (home_team == '%s' && away_team == '%s')) && scheduled > '%s']",
+                    teams[0].id, teams[1].id, teams[1].id, teams[0].id, today);
+                foundGames = jmespath.search(scheduleInfo, gameQuery);
+                if (foundGames.length > 0) {
+                    var sortedGames = foundGames.sort(function (a, b) {
+                        if (a.scheduled < b.scheduled) {
+                            return -1;
+                        }
+                        else if (a.scheduled > b.scheduled) {
+                            return 1;
+                        }
+                        else {
+                            return 0;
+                        }
+                    });
+                    router.mlbAPI.getBoxScore(sortedGames[0].id, function(err, gameInfo) {
+                        if (err) {
+                            router.logger.error(sprintf("Error getting box score info for game id = %s: %s",
+                                sortedGames[0].id, err));
+                        }
+                        callback(err, gameInfo);
+                    });
+                }
+                else {
+                    callback(err, null);
+                }
             }
         });
     }
