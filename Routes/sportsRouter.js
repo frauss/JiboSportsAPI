@@ -33,7 +33,7 @@ var routes = function (express, config, logger) {
                         response.status(200).send(JSON.stringify(responseBody));
                     }
                     else if (foundTeams.length > 1) {
-                        responseBody.error = sprintf("I found multiple teams found for %s, please be more specific", request.body.team);
+                        responseBody.error = sprintf("I found multiple teams for %s, please be more specific", request.body.team);
                         responseBody.teams = foundTeams;
                         response.status(200).send(JSON.stringify(responseBody));
                     }
@@ -79,7 +79,7 @@ var routes = function (express, config, logger) {
                     response.status(200).send(JSON.stringify(responseBody));
                 }
                 else if (foundTeams.length > 1) {
-                    responseBody.error = sprintf("I found multiple teams found for %s, please be more specific", request.body.team);
+                    responseBody.error = sprintf("I found multiple teams for %s, please be more specific", request.body.team);
                     responseBody.teams = foundTeams;
                     response.status(200).send(JSON.stringify(responseBody));
                 }
@@ -120,7 +120,7 @@ var routes = function (express, config, logger) {
                             nextTeam("NoTeamFound");
                         }
                         else if (foundTeams.length > 1) {
-                            responseBody.error = sprintf("I found multiple teams found for %s, please be more specific",
+                            responseBody.error = sprintf("I found multiple teams for %s, please be more specific",
                                 teamToFind);
                             responseBody.teams = foundTeams;
                             response.status(200);
